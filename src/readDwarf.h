@@ -27,6 +27,7 @@ enum DebugLevel : unsigned {
 	DbgDwarfRangeLists = 0x1000,
 	DbgDwarfLines = 0x2000,
 	DbgPrintDwarfTree = 0x4000,
+	DbgPdbUDT = 0x8000,
 };
 
 DEFINE_ENUM_FLAG_OPERATORS(DebugLevel);
@@ -406,6 +407,7 @@ struct DWARF_LineState
 	unsigned long last_addr;
 	std::vector<mspdb::LineInfoEntry> lineInfo;
 	unsigned int lineInfo_file;
+	unsigned int lineInfo_low_line;
 
 	DWARF_LineState()
 	{
