@@ -182,7 +182,7 @@ bool PEImage::replaceDebugSection (const void* data, int datalen, bool initCV)
 		fill = (align - (dump_total_len % align)) % align;
 		align_len = ((xdatalen + align - 1) / align) * align;
 	}
-	char* newdata = (char*) alloc_aligned(dump_total_len + fill + xdatalen, 0x1000);
+	char* newdata = (char*) alloc_aligned(dump_total_len + fill + align_len, 0x1000);
 	if(!newdata)
 		return setError("cannot alloc new image");
 
@@ -195,9 +195,9 @@ bool PEImage::replaceDebugSection (const void* data, int datalen, bool initCV)
 	}
 
 	strcpy((char*) sec[s].Name, ".debug");
-	sec[s].Misc.VirtualSize = align_len; // union with PhysicalAddress;
+	sec[s].Misc.VirtualSize = xdatalen; // union with PhysicalAddress;
 	sec[s].VirtualAddress = lastVirtualAddress;
-	sec[s].SizeOfRawData = xdatalen;
+	sec[s].SizeOfRawData = align_len;
 	sec[s].PointerToRawData = dump_total_len + fill;
 	sec[s].PointerToRelocations = 0;
 	sec[s].PointerToLinenumbers = 0;
@@ -232,6 +232,7 @@ bool PEImage::replaceDebugSection (const void* data, int datalen, bool initCV)
 
 	dbgDir = (IMAGE_DEBUG_DIRECTORY*) (newdata + dump_total_len + fill + datalen);
 	memcpy(dbgDir, &debugdir, sizeof(debugdir));
+	memset(newdata + dump_total_len + fill + xdatalen, 0, align_len - xdatalen);
 
 	dbgDir->PointerToRawData = sec[s].PointerToRawData;
 #if 0
@@ -239,12 +240,12 @@ bool PEImage::replaceDebugSection (const void* data, int datalen, bool initCV)
 	dbgDir->SizeOfData = sec[s].SizeOfRawData;
 #else // suggested by Z3N
 	dbgDir->AddressOfRawData = sec[s].VirtualAddress;
-	dbgDir->SizeOfData = sec[s].SizeOfRawData - sizeof(IMAGE_DEBUG_DIRECTORY);
+	dbgDir->SizeOfData = sec[s].Misc.VirtualSize - sizeof(IMAGE_DEBUG_DIRECTORY);
 #endif
 
 	free_aligned(dump_base);
 	dump_base = newdata;
-	dump_total_len += fill + xdatalen;
+	dump_total_len += fill + align_len;
 
 	return !initCV || initCVPtr(false);
 }
